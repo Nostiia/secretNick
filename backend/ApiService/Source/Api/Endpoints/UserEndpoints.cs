@@ -1,16 +1,17 @@
 ﻿using AutoMapper;
+using Epam.ItMarathon.ApiService.Api.Dto.ReadDtos;
 using Epam.ItMarathon.ApiService.Api.Dto.Requests.UserRequests;
 using Epam.ItMarathon.ApiService.Api.Dto.Responses.UserResponses;
 using Epam.ItMarathon.ApiService.Api.Endpoints.Extension;
 using Epam.ItMarathon.ApiService.Api.Endpoints.Extension.SwaggerTagExtension;
 using Epam.ItMarathon.ApiService.Api.Filters.Validation;
 using Epam.ItMarathon.ApiService.Application.Models.Creation;
+using Epam.ItMarathon.ApiService.Application.UseCases.User.Commands;
+using Epam.ItMarathon.ApiService.Application.UseCases.User.Queries;
+using Epam.ItMarathon.ApiService.Domain.Entities.User;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
-using Epam.ItMarathon.ApiService.Api.Dto.ReadDtos;
-using Epam.ItMarathon.ApiService.Application.UseCases.User.Commands;
-using Epam.ItMarathon.ApiService.Application.UseCases.User.Queries;
 
 namespace Epam.ItMarathon.ApiService.Api.Endpoints
 {
@@ -62,6 +63,17 @@ namespace Epam.ItMarathon.ApiService.Api.Endpoints
                 })
                 .WithSummary("Create and add user to a room.")
                 .WithDescription("Return created user info.");
+
+            _ = root.MapDelete("{id:long}", DeleteUser)
+                .AddEndpointFilterFactory(ValidationFactoryFilter.GetValidationFactory)
+                .Produces(StatusCodes.Status204NoContent)
+                .ProducesProblem(StatusCodes.Status400BadRequest)
+                .ProducesProblem(StatusCodes.Status401Unauthorized)
+                .ProducesProblem(StatusCodes.Status404NotFound)
+                .ProducesProblem(StatusCodes.Status500InternalServerError)
+                .WithSummary("Delete a user by ID.")
+                .WithDescription("Deletes a user from the system by their unique ID.");
+
 
             return application;
         }
@@ -128,6 +140,36 @@ namespace Epam.ItMarathon.ApiService.Api.Endpoints
             return result.IsFailure
                 ? result.Error.ValidationProblem()
                 : Results.Created(string.Empty, mapper.Map<UserCreationResponse>(result.Value));
+        }
+
+        /// <summary>
+        /// Delete a user by unique identifier.
+        /// </summary>
+        /// <param name="userCode">User authorization code.</param>
+        /// <param name="adminCode">User authorization code.</param>
+        /// <param name="mediator">Implementation of <see cref="IMediator"/> for handling business logic.</param>
+        /// <param name="mapper">Implementation of <see cref="IMapper"/> for converting objects.</param>
+        /// <param name="cancellationToken"><see cref="CancellationToken"/> that can be used to cancel operation.</param>
+        /// <returns>Returns <seealso cref="IResult"/> depending on operation result.</returns>
+        public static async Task<IResult> DeleteUser(
+            [FromQuery, Required] string userCode,
+            string adminCode,
+            IMediator mediator,
+            IMapper mapper,
+            CancellationToken cancellationToken)
+        {
+            var result = await mediator.Send(new DeleteUserCommand(userCode, adminCode), cancellationToken);
+
+            if (result.Error == "User.NotFound")
+                return Results.NotFound(result.Error);
+
+            if (result.Error == "Admin.NotFound")
+                return Results.NotFound(result.Error);
+
+            if (result.Error == "Room.Closed")
+                return Results.BadRequest(result.Error);
+
+            return Results.NoContent();
         }
     }
 }

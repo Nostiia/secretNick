@@ -1,8 +1,9 @@
 ﻿using Bogus;
 using Epam.ItMarathon.ApiService.Application.Models.Creation;
 using Epam.ItMarathon.ApiService.Domain.Aggregate.Room;
-using Epam.ItMarathon.ApiService.Domain.Entities.User;
 using Epam.ItMarathon.ApiService.Domain.Builders;
+using Epam.ItMarathon.ApiService.Domain.Entities.User;
+using Epam.ItMarathon.ApiService.Domain.ValueObjects.Wish;
 
 namespace Epam.ItMarathon.ApiService.Application.Tests
 {
@@ -141,5 +142,74 @@ namespace Epam.ItMarathon.ApiService.Application.Tests
             DateTime.Today.AddDays(-7), // A week ago 
             new(2000, 1, 1), // Arbitrary past date
         ];
+    }
+
+    /// <summary>
+    /// Provides test-only extensions for RoomBuilder and UserBuilder.
+    /// </summary>
+    public static class BuildersExtensions
+    {
+        /// <summary>
+        /// Sets a collection of users on the room builder.
+        /// </summary>
+        public static RoomBuilder WithUsers(this RoomBuilder builder, IEnumerable<User> users)
+        {
+            foreach (var user in users)
+            {
+                builder.AddUser(_ => new UserBuilder()
+                    .WithId(user.Id)
+                    .WithAuthCode(user.AuthCode)
+                    .WithFirstName(user.FirstName)
+                    .WithLastName(user.LastName)
+                    .WithPhone(user.Phone)
+                    .WithEmail(user.Email)
+                    .WithWishes([])
+                    .WithDeliveryInfo(user.DeliveryInfo)
+                    .WithWantSurprise(user.WantSurprise)
+                    .WithInterests(user.Interests)
+                    .WithIsAdmin(user.IsAdmin));
+            }
+
+            return builder;
+        }
+
+        /// <summary>
+        /// Marks the user as an administrator.
+        /// </summary>
+        public static UserBuilder AsAdmin(this UserBuilder builder)
+        {
+            builder.WithIsAdmin(true);
+            return builder;
+        }
+
+        /// <summary>
+        /// Marks the user as a regular (non-admin) user.
+        /// </summary>
+        public static UserBuilder AsRegularUser(this UserBuilder builder)
+        {
+            builder.WithIsAdmin(false);
+            return builder;
+        }
+
+        /// <summary>
+        /// Adds a single user instance to the room builder.
+        /// </summary>
+        public static RoomBuilder AddUser(this RoomBuilder builder, User user)
+        {
+            builder.AddUser(_ => new UserBuilder()
+                .WithId(user.Id)
+                .WithAuthCode(user.AuthCode)
+                .WithFirstName(user.FirstName)
+                .WithLastName(user.LastName)
+                .WithPhone(user.Phone)
+                .WithEmail(user.Email)
+                .WithWishes([])
+                .WithDeliveryInfo(user.DeliveryInfo)
+                .WithWantSurprise(user.WantSurprise)
+                .WithInterests(user.Interests)
+                .WithIsAdmin(user.IsAdmin));
+
+            return builder;
+        }
     }
 }

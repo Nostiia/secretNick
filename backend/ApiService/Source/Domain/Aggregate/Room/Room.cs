@@ -293,6 +293,46 @@ namespace Epam.ItMarathon.ApiService.Domain.Aggregate.Room
             return this;
         }
 
+        /// <summary>
+        /// Removes a user from the Room by their AuthCode.
+        /// </summary>
+        /// <param name="userAuthCode">Auth code of the user to remove.</param>
+        /// <returns>Returns <see cref="Room"/> encapsulated in <see cref="Result"/>.</returns>
+        public Result<Room, ValidationResult> RemoveUser(string userAuthCode)
+        {
+            // Check Room is not closed
+            var roomCanBeModifiedResult = CheckRoomCanBeModified();
+            if (roomCanBeModifiedResult.IsFailure)
+            {
+                return Result.Failure<Room, ValidationResult>(roomCanBeModifiedResult.Error);
+            }
+
+            // Find user by AuthCode
+            var userToRemove = Users.FirstOrDefault(u => u.AuthCode == userAuthCode);
+            if (userToRemove is null)
+            {
+                return Result.Failure<Room, ValidationResult>(
+                    new NotFoundError([
+                        new ValidationFailure(nameof(userAuthCode), $"User with AuthCode '{userAuthCode}' not found in this room.")
+                    ])
+                );
+            }
+
+            // Remove and validate
+            Users.Remove(userToRemove);
+            var validationResult = new RoomValidator().Validate(this);
+
+            if (!validationResult.IsValid)
+            {
+                // Restore if removal breaks validation
+                Users.Add(userToRemove);
+                return Result.Failure<Room, ValidationResult>(validationResult);
+            }
+
+            return this;
+        }
+
+
         private Result<bool, ValidationResult> CheckRoomCanBeModified()
         {
             if (ClosedOn is not null)

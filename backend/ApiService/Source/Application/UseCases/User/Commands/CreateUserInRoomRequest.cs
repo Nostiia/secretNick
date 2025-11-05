@@ -13,4 +13,12 @@ namespace Epam.ItMarathon.ApiService.Application.UseCases.User.Commands
     /// <param name="RoomCode">Join code of the Room.</param>
     public record CreateUserInRoomRequest(UserApplication User, string RoomCode)
         : IRequest<IResult<UserEntity, ValidationResult>>;
+
+    /// <summary>
+    /// Request to delete a user from a room.
+    /// </summary>
+    /// <param name="UserCode">Unique code of the user to delete.</param>
+    /// <param name="AdminCode">Unique code of the admin performing the deletion.</param>
+    public record DeleteUserCommand(string UserCode, string AdminCode)
+        : IRequest<IResult<ValidationResult>>;
 }
